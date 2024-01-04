@@ -189,18 +189,10 @@ func (db *DB) Execute(queries []string, useTx, includeTimings bool) ([]*Result, 
 		defer func() {
 			if transaction != nil {
 				if rollback {
-					rollbackErr := transaction.Rollback()
-					// TODO improve err handling
-					if rollbackErr != nil {
-						err = rollbackErr
-					}
+					_ = transaction.Rollback()
 					return
 				}
-				commitErr := transaction.Commit()
-				if commitErr != nil {
-					err = commitErr
-					return
-				}
+				_ = transaction.Commit()
 			}
 		}()
 

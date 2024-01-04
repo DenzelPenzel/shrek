@@ -152,8 +152,10 @@ func (s *Shrek) Database(leader bool) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	f.Close()
-	defer os.Remove(f.Name())
+	_ = f.Close()
+	defer func(name string) {
+		_ = os.Remove(name)
+	}(f.Name())
 
 	if err := s.db.Backup(f.Name()); err != nil {
 		return nil, err
@@ -502,7 +504,7 @@ func New(ctx context.Context, cfg *config.Config, raftLayer Listener) *Shrek {
 func (s *Shrek) Open(allowSingle bool) error {
 	s.logger.Info("Running Raft", zap.String("raftDir", s.raftDir), zap.String("NODE_ID", s.raftID))
 
-	if err := os.MkdirAll(s.raftDir, 0755); err != nil {
+	if err := os.MkdirAll(s.raftDir, 0750); err != nil {
 		s.logger.Fatal("Failed to create raft dir")
 		return err
 	}
@@ -657,8 +659,8 @@ func (s *Shrek) Shutdown() error {
 	}
 
 	if s.raft != nil {
-		s.raftTransport.Close()
-		s.raftLayer.Close()
+		_ = s.raftTransport.Close()
+		_ = s.raftLayer.Close()
 		future := s.raft.Shutdown()
 		if err := future.Error(); err != nil {
 			s.logger.Warn("error shutting down raft", zap.Error(err))

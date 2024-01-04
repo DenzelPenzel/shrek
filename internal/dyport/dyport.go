@@ -43,7 +43,7 @@ func AllocatePorts(count int) ([]int, error) {
 			if err != nil {
 				continue
 			}
-			lockLn.Close()
+			_ = lockLn.Close()
 			return
 		}
 		panic("failed to allocate port block")
@@ -51,20 +51,14 @@ func AllocatePorts(count int) ([]int, error) {
 
 	for len(ports) < count {
 		port++
-
 		if port < initPort+1 || port >= initPort+countPorts {
 			port = initPort + 1
 		}
-
 		ln, err := listener(port)
 		if err != nil {
 			continue
 		}
-
-		err = ln.Close()
-		if err != nil {
-			return nil, err
-		}
+		_ = ln.Close()
 		ports = append(ports, port)
 	}
 

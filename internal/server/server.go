@@ -167,8 +167,8 @@ func (s *Server) Run() error {
 }
 
 func (s *Server) ShutDown() {
-	s.ln.Close()
-	s.srv.Close()
+	_ = s.ln.Close()
+	_ = s.srv.Close()
 }
 
 func (s *Server) Addr() net.Addr {

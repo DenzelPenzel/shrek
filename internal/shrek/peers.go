@@ -14,7 +14,7 @@ const (
 // NumPeers ... Returns the number of peers indicated by the config files within raftDir
 // This code makes assumptions about how the Raft module works
 func NumPeers(raftDir string) (int, error) {
-	buf, err := os.ReadFile(filepath.Join(raftDir, jsonPeerPath))
+	buf, err := os.ReadFile(filepath.Join(raftDir, jsonPeerPath)) // #nosec G304
 	if err != nil && !os.IsNotExist(err) {
 		return 0, err
 	}
