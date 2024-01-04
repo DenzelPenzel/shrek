@@ -28,7 +28,6 @@ test:
 e2e-test:
 	go test ./e2e/... -timeout $(TEST_LIMIT)
 
-
 .PHONY: lint
 lint:
 	@echo "$(GREEN) Linting repository Go code...$(COLOR_END)"
@@ -45,9 +44,3 @@ lint:
 gosec:
 	@echo "$(GREEN) Running security scan with gosec...$(COLOR_END)"
 	gosec ./...
-
-.PHONY: docker-build
-docker-build:
-	@echo "$(GREEN) Building docker image...$(COLOR_END)"
-	@docker build -t $(APP_NAME) .
-

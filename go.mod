@@ -1,6 +1,6 @@
 module github.com/draculaas/shrek
 
-go 1.20
+go 1.21
 
 require (
 	github.com/gin-contrib/zap v0.2.0
