@@ -17,6 +17,9 @@ build-app:
 	@CGO_ENABLED=1 go build -a -o bin/$(APP_NAME) ./cmd/
 	@echo "Binary successfully built"
 
+run-app:
+	@./bin/${APP_NAME}
+
 .PHONY: test
 test:
 	go test ./internal/... -timeout $(TEST_LIMIT)
@@ -29,7 +32,7 @@ e2e-test:
 .PHONY: lint
 lint:
 	@echo "$(GREEN) Linting repository Go code...$(COLOR_END)"
-	@if ! command -v . &> /dev/null; \
+	@if ! command -v golangci-lint &> /dev/null; \
 	then \
     	echo "golangci-lint command could not be found...."; \
 		echo "\nTo install, please run $(GREEN)  $(GET_LINT_CMD) $(COLOR_END)"; \
