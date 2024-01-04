@@ -6,10 +6,12 @@ import (
 )
 
 // Cluster impl
-type Cluster []*Node
+type Cluster struct {
+	nodes []*Node
+}
 
-func (c Cluster) findNode(addr string) (*Node, error) {
-	for _, v := range c {
+func (c *Cluster) findNode(addr string) (*Node, error) {
+	for _, v := range c.nodes {
 		if v.RaftAddr == addr {
 			return v, nil
 		}
@@ -17,15 +19,15 @@ func (c Cluster) findNode(addr string) (*Node, error) {
 	return nil, fmt.Errorf("node not found")
 }
 
-func (c Cluster) Leader() (*Node, error) {
-	l, err := c[0].WaitForLeader()
+func (c *Cluster) Leader() (*Node, error) {
+	l, err := c.nodes[0].WaitForLeader()
 	if err != nil {
 		return nil, err
 	}
 	return c.findNode(l)
 }
 
-func (c Cluster) WaitForNewLeader(oldLeader *Node) (*Node, error) {
+func (c *Cluster) WaitForNewLeader(oldLeader *Node) (*Node, error) {
 	timer := time.NewTimer(30 * time.Second)
 	defer timer.Stop()
 	ticker := time.NewTicker(100 * time.Millisecond)
@@ -47,8 +49,8 @@ func (c Cluster) WaitForNewLeader(oldLeader *Node) (*Node, error) {
 	}
 }
 
-func (c Cluster) Followers() ([]*Node, error) {
-	leaderAddr, err := c[0].WaitForLeader()
+func (c *Cluster) Followers() ([]*Node, error) {
+	leaderAddr, err := c.nodes[0].WaitForLeader()
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +60,7 @@ func (c Cluster) Followers() ([]*Node, error) {
 	}
 
 	var followers []*Node
-	for _, v := range c {
+	for _, v := range c.nodes {
 		if v != leader {
 			followers = append(followers, v)
 		}
@@ -67,18 +69,19 @@ func (c Cluster) Followers() ([]*Node, error) {
 	return followers, nil
 }
 
-func (c Cluster) RemoveNode(n *Node) {
-	for i, v := range c {
-		if v.RaftAddr == n.RaftAddr {
-			c = append(c[:i], c[i+1:]...)
-			return
+func (c *Cluster) RemoveNode(n *Node) {
+	newNodes := make([]*Node, 0)
+	for _, v := range c.nodes {
+		if v.RaftAddr != n.RaftAddr {
+			newNodes = append(newNodes, v)
 		}
 	}
+	c.nodes = newNodes
 }
 
 // Shutdown ... Shutdown each Node in Cluster
-func (c Cluster) Shutdown() {
-	for _, v := range c {
+func (c *Cluster) Shutdown() {
+	for _, v := range c.nodes {
 		v.Shutdown()
 	}
 }

@@ -16,7 +16,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.21
+          go-version: 1.20
 
       - name: Build App
         run: make build-app
@@ -31,7 +31,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.21
+          go-version: 1.20
 
       - name: Install project dependencies
         run: |
@@ -50,7 +50,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.21
+          go-version: 1.20
 
       - name: Run E2E Integration Tests
         run: make e2e-test

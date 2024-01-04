@@ -32,9 +32,17 @@ type Node struct {
 }
 
 func (n *Node) Shutdown() {
-	n.Store.Shutdown()
+	err := n.Store.Shutdown()
+	if err != nil {
+		panic(err)
+		return
+	}
 	n.Service.ShutDown()
-	os.RemoveAll(n.Dir)
+	err = os.RemoveAll(n.Dir)
+	if err != nil {
+		panic(err)
+		return
+	}
 }
 
 func (n *Node) sameAs(o *Node) bool {
@@ -51,7 +59,7 @@ func (n *Node) Execute(body server.QueryRequest) (string, error) {
 		return "", err
 	}
 
-	u, err := n.getApiURL("execute")
+	u, err := n.getAPIURL("execute")
 	if err != nil {
 		return "", err
 	}
@@ -60,7 +68,7 @@ func (n *Node) Execute(body server.QueryRequest) (string, error) {
 }
 
 func (n *Node) Query(body server.QueryRequest) (string, error) {
-	u, err := n.getApiURL("query")
+	u, err := n.getAPIURL("query")
 	if err != nil {
 		return "", err
 	}
@@ -73,7 +81,13 @@ func (n *Node) Query(body server.QueryRequest) (string, error) {
 
 func (n *Node) Status() (string, error) {
 	v, _ := url.Parse("http://" + n.APIAddr + "/api/db/stats")
-	resp, err := http.Get(v.String())
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, v.String(), nil)
+	if err != nil {
+		return "", err
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -88,7 +102,7 @@ func (n *Node) Status() (string, error) {
 	return string(body), nil
 }
 
-func (n *Node) getApiURL(suffix string) (*url.URL, error) {
+func (n *Node) getAPIURL(suffix string) (*url.URL, error) {
 	host := fmt.Sprintf("http://%s", n.APIAddr)
 	u, err := url.Parse(fmt.Sprintf("%s/api/db/%s", host, suffix))
 	if err != nil {
@@ -98,7 +112,14 @@ func (n *Node) getApiURL(suffix string) (*url.URL, error) {
 }
 
 func (n *Node) postRequest(u *url.URL, j string) (string, error) {
-	resp, err := http.Post(u.String(), "application/json", strings.NewReader(j))
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), strings.NewReader(j))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application-type/json")
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -122,8 +143,8 @@ func (n *Node) Join(leader *Node) error {
 	return nil
 }
 
-func joinRequest(nodeAddr, raftId, raftAddr string) (*http.Response, error) {
-	b, err := json.Marshal(map[string]interface{}{"id": raftId, "addr": raftAddr})
+func joinRequest(nodeAddr, raftID, raftAddr string) (*http.Response, error) {
+	b, err := json.Marshal(map[string]interface{}{"id": raftID, "addr": raftAddr})
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +152,16 @@ func joinRequest(nodeAddr, raftId, raftAddr string) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp, err := http.Post(u.String(), "application-type/json", bytes.NewReader(b))
+
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), bytes.NewReader(b))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application-type/json")
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -154,8 +184,8 @@ func CreateNewNode(enableSingle bool) *Node {
 		return nil
 	}
 
-	httpAddr, _ := utils.GetTcpAddr(fmt.Sprintf("localhost:%s", strconv.Itoa(ports[0])))
-	raftAddr, _ := utils.GetTcpAddr(fmt.Sprintf("localhost:%s", strconv.Itoa(ports[1])))
+	httpAddr, _ := utils.GetTCPAddr(fmt.Sprintf("localhost:%s", strconv.Itoa(ports[0])))
+	raftAddr, _ := utils.GetTCPAddr(fmt.Sprintf("localhost:%s", strconv.Itoa(ports[1])))
 	raftHeartbeatTimeout, _ := time.ParseDuration("1s")
 	raftElectionTimeout, _ := time.ParseDuration("1s")
 	raftOpenTimeout, _ := time.ParseDuration("120s")
@@ -166,7 +196,7 @@ func CreateNewNode(enableSingle bool) *Node {
 	cfg := &config.Config{
 		Environment: core.Local,
 		ServerConfig: &config.ServerConfig{
-			HttpAddr: httpAddr,
+			HTTPAddr: httpAddr,
 		},
 		StorageConfig: &config.StorageConfig{
 			RaftID:               raftID,

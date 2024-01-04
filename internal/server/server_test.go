@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,7 +27,7 @@ func Test_HTTPServer(t *testing.T) {
 	t.Run("test create a new server server", func(t *testing.T) {
 		m := &MockStorage{}
 		cfg := createMockConfig()
-		s := New(nil, cfg.ServerConfig, m)
+		s := New(context.TODO(), cfg.ServerConfig, m)
 		defer s.ShutDown()
 		err := s.Run()
 		require.NoError(t, err)
@@ -35,7 +36,7 @@ func Test_HTTPServer(t *testing.T) {
 	t.Run("test content type", func(t *testing.T) {
 		m := &MockStorage{}
 		cfg := createMockConfig()
-		s := New(nil, cfg.ServerConfig, m)
+		s := New(context.TODO(), cfg.ServerConfig, m)
 		defer s.ShutDown()
 		err := s.Run()
 		require.NoError(t, err)
@@ -52,7 +53,7 @@ func Test_HTTPServer(t *testing.T) {
 	t.Run("test 404 route", func(t *testing.T) {
 		m := &MockStorage{}
 		cfg := createMockConfig()
-		s := New(nil, cfg.ServerConfig, m)
+		s := New(context.TODO(), cfg.ServerConfig, m)
 		defer s.ShutDown()
 		err := s.Run()
 		require.NoError(t, err)
@@ -72,7 +73,7 @@ func Test_HTTPServer(t *testing.T) {
 	t.Run("test execute abd query requests", func(t *testing.T) {
 		m := &MockStorage{}
 		cfg := createMockConfig()
-		s := New(nil, cfg.ServerConfig, m)
+		s := New(context.TODO(), cfg.ServerConfig, m)
 		defer s.ShutDown()
 		err := s.Run()
 		require.NoError(t, err)
@@ -129,7 +130,7 @@ func Test_HTTPServer(t *testing.T) {
 
 	t.Run("test set join node", func(t *testing.T) {
 		mockSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != "POST" {
+			if r.Method != http.MethodPost {
 				t.Fatalf("invalid method name: %s", r.Method)
 			}
 			w.WriteHeader(http.StatusOK)
@@ -145,7 +146,7 @@ func Test_HTTPServer(t *testing.T) {
 	t.Run("test set join node and parse meta", func(t *testing.T) {
 		var body map[string]interface{}
 		mockSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != "POST" {
+			if r.Method != http.MethodPost {
 				t.Fatalf("invalid method name: %s", r.Method)
 			}
 			w.WriteHeader(http.StatusOK)
@@ -251,8 +252,6 @@ func Test_HTTPServer(t *testing.T) {
 }
 
 type MockStorage struct {
-	executeFn func(queries []string, useTx, IncludeTimings bool) ([]*sql.Result, error)
-	queryFn   func(queries []string, useTx, leader, verify bool) ([]*sql.Rows, error)
 }
 
 func (s *MockStorage) LeaderID() (string, error) {
@@ -260,10 +259,10 @@ func (s *MockStorage) LeaderID() (string, error) {
 }
 
 func (s *MockStorage) Stats() (map[string]interface{}, error) {
-	return nil, nil
+	return nil, nil //nolint:nilnil //Ignore it
 }
 
-func (s *MockStorage) GetMetadata(id, key string) string {
+func (s *MockStorage) GetMetadata(_, _ string) string {
 	return ""
 }
 
@@ -296,24 +295,16 @@ func (s *MockStorage) Query(r *shrek.QueryRequest) ([]*sql.Rows, error) {
 	return []*sql.Rows{resp}, nil
 }
 
-func (s *MockStorage) Join(id, addr string, metadata map[string]string) error {
+func (s *MockStorage) Join(_, _ string, _ map[string]string) error {
 	return nil
 }
 
-func (s *MockStorage) Remove(addr string) error {
+func (s *MockStorage) Remove(_ string) error {
 	return nil
 }
 
 func (s *MockStorage) Leader() string {
 	return ""
-}
-
-func mockHTTP(url string) *http.Request {
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		panic("failed to create HTTP request")
-	}
-	return req
 }
 
 func tempDir() string {
@@ -328,8 +319,8 @@ func createMockConfig() *config.Config {
 	dir := tempDir()
 	defer os.RemoveAll(dir)
 
-	httpAddr, _ := utils.GetTcpAddr("localhost:4001")
-	raftAddr, _ := utils.GetTcpAddr("localhost:4002")
+	httpAddr, _ := utils.GetTCPAddr("localhost:4001")
+	raftAddr, _ := utils.GetTCPAddr("localhost:4002")
 	raftHeartbeatTimeout, _ := time.ParseDuration("1s")
 	raftElectionTimeout, _ := time.ParseDuration("1s")
 	raftOpenTimeout, _ := time.ParseDuration("120s")
@@ -340,7 +331,7 @@ func createMockConfig() *config.Config {
 	return &config.Config{
 		Environment: core.Local,
 		ServerConfig: &config.ServerConfig{
-			HttpAddr: httpAddr,
+			HTTPAddr: httpAddr,
 		},
 		StorageConfig: &config.StorageConfig{
 			RaftID:               raftID,

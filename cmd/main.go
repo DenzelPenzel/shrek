@@ -2,17 +2,17 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/draculaas/shrek/internal/app"
 	"github.com/draculaas/shrek/internal/config"
 	"github.com/draculaas/shrek/internal/logging"
 	"github.com/urfave/cli"
 	"go.uber.org/zap"
+	"log"
 	"os"
 	"runtime/pprof"
 )
 
-const SHREK_APP = `
+const ShrekApp = `
 ⡴⠑⡄⠀⠀⠀⠀⠀⠀⠀ ⣀⣀⣤⣤⣤⣀⡀
 ⠸⡇⠀⠿⡀⠀⠀⠀⣀⡴⢿⣿⣿⣿⣿⣿⣿⣿⣷⣦⡀
 ⠀⠀⠀⠀⠑⢄⣠⠾⠁⣀⣄⡈⠙⣿⣿⣿⣿⣿⣿⣿⣿⣆
@@ -30,18 +30,18 @@ const SHREK_APP = `
 
 // RunApp ... Application entry point
 func RunApp(c *cli.Context) error {
-	fmt.Println(SHREK_APP)
+	log.Println(ShrekApp)
 	cfg := config.NewConfig(c)
 	ctx := context.Background()
 
 	logging.New(cfg.Environment)
 	logger := logging.WithContext(ctx)
 
-	if cfg.CpuProfile != "" {
+	if cfg.CPUProfile != "" {
 		logger.Debug("Profiling enabled")
-		f, err := os.Create(cfg.CpuProfile)
+		f, err := os.Create(cfg.CPUProfile)
 		if err != nil {
-			logger.Fatal("Failed to create cpu profile file", zap.Error(err), zap.String("file", cfg.CpuProfile))
+			logger.Fatal("Failed to create cpu profile file", zap.Error(err), zap.String("file", cfg.CPUProfile))
 			return err
 		}
 

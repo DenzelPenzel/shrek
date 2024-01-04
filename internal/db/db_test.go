@@ -67,6 +67,7 @@ func TestDatabase(t *testing.T) {
 		r, err := db.Query([]string{"select * from sqlite_master"}, false, false)
 		require.NoError(t, err)
 		res, err := json.Marshal(r)
+		require.NoError(t, err)
 		require.Equal(t, `[{"columns":["type","name","tbl_name","rootpage","sql"],"types":["text","text","text","int","text"],"values":[["table","test","test",2,"CREATE TABLE test (id integer not null primary key, name text)"]]}]`, string(res))
 	})
 
@@ -121,6 +122,7 @@ func TestDatabase(t *testing.T) {
 		raw, err = db.Query([]string{"select * from test"}, false, false)
 		require.NoError(t, err)
 		res, err = json.Marshal(raw)
+		require.NoError(t, err)
 		require.Equal(t, `[{"columns":["id","name"],"types":["integer","text"],"values":[[1,"ana"],[2,"vasya"]]}]`, string(res))
 
 		// delete
@@ -130,6 +132,7 @@ func TestDatabase(t *testing.T) {
 		raw, err = db.Query([]string{"SELECT * FROM test"}, false, false)
 		require.NoError(t, err)
 		res, err = json.Marshal(raw)
+		require.NoError(t, err)
 		require.Equal(t, `[{"columns":["id","name"],"types":["integer","text"],"values":[[1,"ana"]]}]`, string(res))
 	})
 

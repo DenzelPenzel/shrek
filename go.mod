@@ -1,6 +1,6 @@
 module github.com/draculaas/shrek
 
-go 1.21
+go 1.20
 
 require (
 	github.com/gin-contrib/zap v0.2.0
@@ -8,7 +8,6 @@ require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/hashicorp/raft v1.6.0
 	github.com/hashicorp/raft-boltdb v0.0.0-20231211162105-6c830fa4535e
-	github.com/joho/godotenv v1.5.1
 	github.com/mattn/go-sqlite3 v1.14.19
 	github.com/stretchr/testify v1.8.4
 	github.com/urfave/cli v1.22.14
@@ -49,10 +48,10 @@ require (
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.5.0 // indirect
-	golang.org/x/crypto v0.14.0 // indirect
-	golang.org/x/net v0.16.0 // indirect
-	golang.org/x/sys v0.13.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/crypto v0.16.0 // indirect
+	golang.org/x/net v0.19.0 // indirect
+	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

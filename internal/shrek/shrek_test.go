@@ -1,6 +1,7 @@
 package shrek
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/draculaas/shrek/internal/config"
 	"github.com/draculaas/shrek/internal/core"
@@ -16,12 +17,18 @@ import (
 func Test_Shrek(t *testing.T) {
 	t.Run("test open shrek single node", func(t *testing.T) {
 		ms := createMockStore()
-		defer os.RemoveAll(ms.Path())
+		defer func(path string) {
+			err := os.RemoveAll(path)
+			if err != nil {
+				panic(err)
+			}
+		}(ms.Path())
 
 		err := ms.Open(true)
 		require.NoError(t, err)
 
-		ms.WaitForLeader(10 * time.Second)
+		_, err = ms.WaitForLeader(10 * time.Second)
+		require.NoError(t, err)
 		leaderAddr, _ := ms.LeaderAddr()
 		require.Equal(t, string(leaderAddr), ms.Addr())
 
@@ -33,25 +40,42 @@ func Test_Shrek(t *testing.T) {
 
 	t.Run("test open shrek close single node", func(t *testing.T) {
 		ms := createMockStore()
-		defer os.RemoveAll(ms.Path())
+		defer func(path string) {
+			err := os.RemoveAll(path)
+			if err != nil {
+				panic(err)
+			}
+		}(ms.Path())
 
 		err := ms.Open(true)
 		require.NoError(t, err)
 
-		ms.WaitForLeader(10 * time.Second)
+		_, err = ms.WaitForLeader(10 * time.Second)
+		require.NoError(t, err)
 		err = ms.Shutdown()
 		require.NoError(t, err)
 	})
 
 	t.Run("test single node in-memory execute query", func(t *testing.T) {
 		ms := createMockStore()
-		defer os.RemoveAll(ms.Path())
+		defer func(path string) {
+			err := os.RemoveAll(path)
+			if err != nil {
+				panic(err)
+			}
+		}(ms.Path())
 
 		err := ms.Open(true)
-		defer ms.Shutdown()
+		defer func(ms *Shrek) {
+			err := ms.Shutdown()
+			if err != nil {
+				panic(err)
+			}
+		}(ms)
 		require.NoError(t, err)
 
-		ms.WaitForLeader(10 * time.Second)
+		_, err = ms.WaitForLeader(10 * time.Second)
+		require.NoError(t, err)
 
 		queries := []string{
 			`create table test (id integer not null primary key, name text)`,
@@ -72,13 +96,24 @@ func Test_Shrek(t *testing.T) {
 
 	t.Run("test single node in-memory execute query", func(t *testing.T) {
 		ms := createMockStore()
-		defer os.RemoveAll(ms.Path())
+		defer func(path string) {
+			err := os.RemoveAll(path)
+			if err != nil {
+				panic(err)
+			}
+		}(ms.Path())
 
 		err := ms.Open(true)
-		defer ms.Shutdown()
+		defer func(ms *Shrek) {
+			err := ms.Shutdown()
+			if err != nil {
+				panic(err)
+			}
+		}(ms)
 		require.NoError(t, err)
-		//
-		ms.WaitForLeader(10 * time.Second)
+
+		_, err = ms.WaitForLeader(10 * time.Second)
+		require.NoError(t, err)
 
 		queries := []string{
 			`insert into test(id, name) values (1, "vasya")`,
@@ -93,13 +128,24 @@ func Test_Shrek(t *testing.T) {
 
 	t.Run("test single node multi execution query", func(t *testing.T) {
 		ms := createMockStore()
-		defer os.RemoveAll(ms.Path())
+		defer func(path string) {
+			err := os.RemoveAll(path)
+			if err != nil {
+				panic(err)
+			}
+		}(ms.Path())
 
 		err := ms.Open(true)
-		defer ms.Shutdown()
+		defer func(ms *Shrek) {
+			err := ms.Shutdown()
+			if err != nil {
+				panic(err)
+			}
+		}(ms)
 		require.NoError(t, err)
 
-		ms.WaitForLeader(10 * time.Second)
+		_, err = ms.WaitForLeader(10 * time.Second)
+		require.NoError(t, err)
 
 		queries := []string{
 			`create table test (id integer not null primary key, name TEXT)`,
@@ -125,13 +171,24 @@ func Test_Shrek(t *testing.T) {
 
 	t.Run("test single node execution query tx", func(t *testing.T) {
 		ms := createMockStore()
-		defer os.RemoveAll(ms.Path())
+		defer func(path string) {
+			err := os.RemoveAll(path)
+			if err != nil {
+				panic(err)
+			}
+		}(ms.Path())
 
 		err := ms.Open(true)
-		defer ms.Shutdown()
+		defer func(ms *Shrek) {
+			err := ms.Shutdown()
+			if err != nil {
+				panic(err)
+			}
+		}(ms)
 		require.NoError(t, err)
 
-		ms.WaitForLeader(10 * time.Second)
+		_, err = ms.WaitForLeader(10 * time.Second)
+		require.NoError(t, err)
 
 		queries := []string{
 			`create table test (id integer not null primary key, name TEXT)`,
@@ -157,13 +214,24 @@ func Test_Shrek(t *testing.T) {
 
 	t.Run("test single node load", func(t *testing.T) {
 		ms := createMockStore()
-		defer os.RemoveAll(ms.Path())
+		defer func(path string) {
+			err := os.RemoveAll(path)
+			if err != nil {
+				panic(err)
+			}
+		}(ms.Path())
 
 		err := ms.Open(true)
-		defer ms.Shutdown()
+		defer func(ms *Shrek) {
+			err := ms.Shutdown()
+			if err != nil {
+				panic(err)
+			}
+		}(ms)
 		require.NoError(t, err)
 
-		ms.WaitForLeader(10 * time.Second)
+		_, err = ms.WaitForLeader(10 * time.Second)
+		require.NoError(t, err)
 
 		dump := `
 			pragma foreign_keys=off;
@@ -227,8 +295,8 @@ func createMockStore() *Shrek {
 
 	ln := createMockLister("localhost:0")
 
-	httpAddr, _ := utils.GetTcpAddr("localhost:4001")
-	raftAddr, _ := utils.GetTcpAddr("localhost:4002")
+	httpAddr, _ := utils.GetTCPAddr("localhost:4001")
+	raftAddr, _ := utils.GetTCPAddr("localhost:4002")
 	raftHeartbeatTimeout, _ := time.ParseDuration("1s")
 	raftElectionTimeout, _ := time.ParseDuration("1s")
 	raftOpenTimeout, _ := time.ParseDuration("120s")
@@ -239,7 +307,7 @@ func createMockStore() *Shrek {
 	cfg := &config.Config{
 		Environment: core.Local,
 		ServerConfig: &config.ServerConfig{
-			HttpAddr: httpAddr,
+			HTTPAddr: httpAddr,
 		},
 		StorageConfig: &config.StorageConfig{
 			RaftID:               raftID,
@@ -259,5 +327,5 @@ func createMockStore() *Shrek {
 		},
 	}
 
-	return New(nil, cfg, ln)
+	return New(context.TODO(), cfg, ln)
 }

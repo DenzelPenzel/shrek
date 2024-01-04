@@ -1,10 +1,10 @@
 package dyport
 
 import (
-	"math/rand"
+	"crypto/rand"
+	"math/big"
 	"net"
 	"sync"
-	"time"
 )
 
 const (
@@ -33,10 +33,12 @@ func AllocatePorts(count int) ([]int, error) {
 	ports := make([]int, 0)
 
 	once.Do(func() {
-		source := rand.NewSource(time.Now().UnixNano())
-		rng := rand.New(source)
 		for i := 0; i < attempts; i++ {
-			initPort = minPort + rng.Intn(maxBlocks)*countPorts
+			rndBlocks, err := rand.Int(rand.Reader, big.NewInt(maxBlocks))
+			if err != nil {
+				continue
+			}
+			initPort = minPort + int(rndBlocks.Int64())*countPorts
 			lockLn, err := listener(initPort)
 			if err != nil {
 				continue
@@ -48,7 +50,7 @@ func AllocatePorts(count int) ([]int, error) {
 	})
 
 	for len(ports) < count {
-		port += 1
+		port++
 
 		if port < initPort+1 || port >= initPort+countPorts {
 			port = initPort + 1
@@ -59,7 +61,10 @@ func AllocatePorts(count int) ([]int, error) {
 			continue
 		}
 
-		ln.Close()
+		err = ln.Close()
+		if err != nil {
+			return nil, err
+		}
 		ports = append(ports, port)
 	}
 

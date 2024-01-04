@@ -20,7 +20,12 @@ func Test_Network(t *testing.T) {
 		nt1 := NewNetwork()
 		err := nt1.Open("127.0.0.1:7777")
 		require.NoError(t, err)
-		go nt1.Accept()
+		go func() {
+			_, err := nt1.Accept()
+			if err != nil {
+				return
+			}
+		}()
 
 		nt2 := NewNetwork()
 		_, err = nt2.Dial(nt1.Addr().String(), time.Second)

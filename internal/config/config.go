@@ -14,14 +14,14 @@ import (
 type Config struct {
 	Environment   core.Env
 	ServerConfig  *ServerConfig
-	CpuProfile    string
+	CPUProfile    string
 	StorageConfig *StorageConfig
 }
 
 // ServerConfig ... Server configuration options
 type ServerConfig struct {
-	HttpAddr      net.Addr
-	HttpAdvertise *net.TCPAddr
+	HTTPAddr      net.Addr
+	HTTPAdvertise *net.TCPAddr
 
 	JoinServerHost string
 	JoinServerPort int
@@ -76,13 +76,13 @@ func NewConfig(c *cli.Context) *Config {
 	inMemory := c.Bool("in-memory")
 
 	env := c.String("env")
-	raftNodeId := c.String("node-id")
-	if raftNodeId == "" {
-		raftNodeId = utils.RandomString(5)
+	raftNodeID := c.String("node-id")
+	if raftNodeID == "" {
+		raftNodeID = utils.RandomString(5)
 	}
 
-	httpAddr, _ := utils.GetTcpAddr(c.String("server-addr"))
-	httpAdvertise, _ := utils.GetTcpAddr(c.String("server-advertise"))
+	httpAddr, _ := utils.GetTCPAddr(c.String("server-addr"))
+	httpAdvertise, _ := utils.GetTCPAddr(c.String("server-advertise"))
 
 	allowedOrigins := strings.Split(c.String("allowed-origins"), ",")
 	allowedMethods := strings.Split(c.String("allowed-methods"), ",")
@@ -94,8 +94,8 @@ func NewConfig(c *cli.Context) *Config {
 	if raftDir == "" {
 		raftDir = utils.RandomString(5)
 	}
-	raftAddr, _ := utils.GetTcpAddr(c.String("raft-addr"))
-	raftAdvertise, _ := utils.GetTcpAddr(c.String("raft-advertise"))
+	raftAddr, _ := utils.GetTCPAddr(c.String("raft-addr"))
+	raftAdvertise, _ := utils.GetTCPAddr(c.String("raft-advertise"))
 
 	raftHeartbeatTimeout, _ := time.ParseDuration(c.String("raft-heartbeat-timeout"))
 	raftElectionTimeout, _ := time.ParseDuration(c.String("raft-election-timeout"))
@@ -108,11 +108,11 @@ func NewConfig(c *cli.Context) *Config {
 
 	config := &Config{
 		Environment: core.Env(env),
-		CpuProfile:  cpuProfile,
+		CPUProfile:  cpuProfile,
 
 		ServerConfig: &ServerConfig{
-			HttpAddr:       httpAddr,
-			HttpAdvertise:  httpAdvertise,
+			HTTPAddr:       httpAddr,
+			HTTPAdvertise:  httpAdvertise,
 			AllowedOrigins: allowedOrigins,
 			AllowedMethods: allowedMethods,
 			AllowedHeaders: allowedHeaders,
@@ -124,7 +124,7 @@ func NewConfig(c *cli.Context) *Config {
 				DSN:        dsn,
 				InMemory:   inMemory,
 			},
-			RaftID:               raftNodeId,
+			RaftID:               raftNodeID,
 			RaftDir:              raftDir,
 			RaftAddr:             raftAddr,
 			RaftAdvertise:        raftAdvertise,
@@ -154,12 +154,4 @@ func (cfg *Config) IsDevelopment() bool {
 // IsLocal ... Returns true if the env is local
 func (cfg *Config) IsLocal() bool {
 	return cfg.Environment == core.Local
-}
-
-func getTcpAddr(addr string) (*net.TCPAddr, error) {
-	res, err := net.ResolveTCPAddr("tcp", addr)
-	if err != nil {
-		return nil, err
-	}
-	return res, nil
 }

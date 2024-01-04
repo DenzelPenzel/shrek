@@ -12,6 +12,11 @@ COLOR_END = \033[0;39m
 
 TEST_LIMIT = 500s
 
+build-app:
+	@echo "$(BLUE)» building application binary... $(COLOR_END)"
+	@CGO_ENABLED=1 go build -a -o bin/$(APP_NAME) ./cmd/
+	@echo "Binary successfully built"
+
 .PHONY: test
 test:
 	go test ./internal/... -timeout $(TEST_LIMIT)
@@ -24,12 +29,12 @@ e2e-test:
 .PHONY: lint
 lint:
 	@echo "$(GREEN) Linting repository Go code...$(COLOR_END)"
-	@if ! command -v golangci-lint &> /dev/null; \
+	@if ! command -v . &> /dev/null; \
 	then \
-		echo "golangci-lint command could not be found...."; \
+    	echo "golangci-lint command could not be found...."; \
 		echo "\nTo install, please run $(GREEN)  $(GET_LINT_CMD) $(COLOR_END)"; \
 		echo "\nBuild instructions can be found at: https://golangci-lint.run/usage/install/."; \
-		exit 1; \
+    	exit 1; \
 	fi
 
 	@golangci-lint run
@@ -37,7 +42,6 @@ lint:
 gosec:
 	@echo "$(GREEN) Running security scan with gosec...$(COLOR_END)"
 	gosec ./...
-
 
 .PHONY: docker-build
 docker-build:

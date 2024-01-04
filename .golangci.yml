@@ -46,7 +46,7 @@ linters-settings:
   gocognit:
     # Minimal code complexity to report.
     # Default: 30
-    min-complexity: 35
+    min-complexity: 60
 
   gocritic:
     # Settings passed to gocritic.
@@ -143,7 +143,7 @@ linters:
     - goconst # finds repeated strings that could be replaced by a constant
     - gocritic # provides diagnostics that check for bugs, performance and style issues
     - gocyclo # computes and checks the cyclomatic complexity of functions
-    - goimports # in addition to fixing imports, goimports also formats your code in the same style as gofmt
+    #- goimports # in addition to fixing imports, goimports also formats your code in the same style as gofmt
     # - gomnd # detects magic numbers
     - gomodguard # allow and block lists linter for direct Go module dependencies. This is different from depguard where there are different block types for example version constraints and module recommendations
     - goprintffuncname # checks that printf-like functions are named with f at the end

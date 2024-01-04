@@ -2,14 +2,13 @@ package db
 
 import (
 	"database/sql/driver"
+	"errors"
 	"fmt"
 	"github.com/mattn/go-sqlite3"
 	"io"
 	"os"
 	"strings"
 	"time"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
 type Queryer interface {
@@ -23,7 +22,6 @@ type Execer interface {
 type DB struct {
 	dbConn *sqlite3.SQLiteConn // Driver connection to database
 	path   string              // Path to database file
-	memory bool                // Keep data in-memory only
 }
 
 type Result struct {
@@ -80,17 +78,24 @@ func (db *DB) Close() error {
 func (db *DB) Query(queries []string, useTx, includeTimings bool) ([]*Rows, error) {
 	var queryer Queryer
 	var transaction driver.Tx
-
 	var res []*Rows
 
-	err := func() (err error) {
+	err := func() error {
+		var err error
+
 		defer func() {
 			if transaction != nil {
 				if err != nil {
-					transaction.Rollback()
+					err := transaction.Rollback()
+					if err != nil {
+						return
+					}
 					return
 				}
-				transaction.Commit()
+				err := transaction.Commit()
+				if err != nil {
+					return
+				}
 			}
 		}()
 
@@ -129,7 +134,7 @@ func (db *DB) Query(queries []string, useTx, includeTimings bool) ([]*Rows, erro
 			for {
 				err := response.Next(dest)
 				if err != nil {
-					if err != io.EOF {
+					if !errors.Is(err, io.EOF) {
 						rows.Error = err.Error()
 					}
 					break
@@ -139,7 +144,7 @@ func (db *DB) Query(queries []string, useTx, includeTimings bool) ([]*Rows, erro
 			}
 
 			if includeTimings {
-				rows.Time = time.Now().Sub(start).Seconds()
+				rows.Time = time.Since(start).Seconds()
 			}
 
 			res = append(res, rows)
@@ -172,21 +177,30 @@ func (db *DB) Backup(path string) error {
 	return err
 }
 
+// Execute ... TODO improve logic
 func (db *DB) Execute(queries []string, useTx, includeTimings bool) ([]*Result, error) {
 	var res []*Result
 	var execer Execer
 	var rollback bool
 	var transaction driver.Tx
 
-	err := func() (err error) {
-
+	err := func() error {
+		var err error
 		defer func() {
 			if transaction != nil {
 				if rollback {
-					transaction.Rollback()
+					rollbackErr := transaction.Rollback()
+					// TODO improve err handling
+					if rollbackErr != nil {
+						err = rollbackErr
+					}
 					return
 				}
-				transaction.Commit()
+				commitErr := transaction.Commit()
+				if commitErr != nil {
+					err = commitErr
+					return
+				}
 			}
 		}()
 
@@ -229,7 +243,7 @@ func (db *DB) Execute(queries []string, useTx, includeTimings bool) ([]*Result, 
 				continue
 			}
 
-			lastId, err := r.LastInsertId()
+			lastID, err := r.LastInsertId()
 			if err != nil {
 				if handleError(result, err) {
 					continue
@@ -237,7 +251,7 @@ func (db *DB) Execute(queries []string, useTx, includeTimings bool) ([]*Result, 
 				break
 			}
 
-			result.LastInsertID = lastId
+			result.LastInsertID = lastID
 
 			aRow, err := r.RowsAffected()
 			if err != nil {
@@ -249,7 +263,7 @@ func (db *DB) Execute(queries []string, useTx, includeTimings bool) ([]*Result, 
 			result.RowsAffected = aRow
 
 			if includeTimings {
-				result.Time = time.Now().Sub(startAt).Seconds()
+				result.Time = time.Since(startAt).Seconds()
 			}
 
 			res = append(res, result)
@@ -270,7 +284,10 @@ func copyDatabase(source *sqlite3.SQLiteConn, target *sqlite3.SQLiteConn) error 
 	for {
 		done, err := backup.Step(-1)
 		if err != nil {
-			backup.Finish()
+			backupErr := backup.Finish()
+			if backupErr != nil {
+				return backupErr
+			}
 			return err
 		}
 		if done {
@@ -279,11 +296,7 @@ func copyDatabase(source *sqlite3.SQLiteConn, target *sqlite3.SQLiteConn) error 
 		time.Sleep(250 * time.Millisecond)
 	}
 
-	if err := backup.Finish(); err != nil {
-		return err
-	}
-
-	return nil
+	return backup.Finish()
 }
 
 func normalizeRowValues(row []driver.Value, types []string) []interface{} {

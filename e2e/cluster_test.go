@@ -247,7 +247,10 @@ func Test_MultiNodes(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, node1.RaftAddr, lAddr)
 
-	c := &Cluster{node1, node2}
+	c := &Cluster{
+		nodes: []*Node{node1, node2},
+	}
+
 	l, err := c.Leader()
 	require.NoError(t, err)
 
@@ -260,7 +263,9 @@ func Test_MultiNodes(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, node1.RaftAddr, lAddr)
 
-	c = &Cluster{node1, node2, node3}
+	c = &Cluster{
+		nodes: []*Node{node1, node2, node3},
+	}
 	l, err = c.Leader()
 	require.NoError(t, err)
 

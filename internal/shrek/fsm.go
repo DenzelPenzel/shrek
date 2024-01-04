@@ -52,7 +52,10 @@ func (f *fsmSnapshot) Persist(sink raft.SnapshotSink) error {
 	}()
 
 	if err != nil {
-		sink.Cancel()
+		sinkErr := sink.Cancel()
+		if sinkErr != nil {
+			return sinkErr
+		}
 		return err
 	}
 

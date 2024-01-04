@@ -151,7 +151,9 @@ func (s *Server) handleJoin() gin.HandlerFunc {
 		if _, ok := req["meta"].(map[string]interface{}); ok {
 			meta = make(map[string]string)
 			for key, value := range req["meta"].(map[string]interface{}) {
-				meta[key] = value.(string)
+				if stringValue, ok := value.(string); ok {
+					meta[key] = stringValue
+				}
 			}
 		}
 

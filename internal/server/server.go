@@ -18,7 +18,6 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
-	"sync"
 	"time"
 )
 
@@ -57,19 +56,16 @@ func NewResponse() *Response {
 }
 
 type Server struct {
-	mu sync.RWMutex
 	ln net.Listener
 
 	addr    net.Addr
-	engine  *gin.Engine
 	cfg     *config.ServerConfig
 	storage Storage
 	srv     *http.Server
 
-	lastBackup time.Time
-	start      time.Time
+	start time.Time
 
-	statuses map[string]Statuser
+	statuses map[string]StatsI
 
 	Expvar bool
 	Pprof  bool
@@ -79,8 +75,8 @@ type Server struct {
 	logger *zap.Logger
 }
 
-// Statuser ...  Interface that status providers are required to implement
-type Statuser interface {
+// StatsI ...  Interface that status providers are required to implement
+type StatsI interface {
 	Stats() (interface{}, error)
 }
 
@@ -110,10 +106,10 @@ func New(ctx context.Context, cfg *config.ServerConfig, s Storage) *Server {
 	logger := logging.WithContext(ctx)
 	return &Server{
 		cfg:      cfg,
-		addr:     cfg.HttpAddr,
+		addr:     cfg.HTTPAddr,
 		storage:  s,
 		start:    time.Now(),
-		statuses: make(map[string]Statuser),
+		statuses: make(map[string]StatsI),
 		logger:   logger,
 	}
 }
@@ -145,7 +141,8 @@ func (s *Server) Run() error {
 	router.POST("/api/db/join", s.handleJoin())
 
 	srv := &http.Server{
-		Handler: router,
+		Handler:           router,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 
 	ln, err := net.Listen("tcp", s.addr.String())
@@ -172,7 +169,6 @@ func (s *Server) Run() error {
 func (s *Server) ShutDown() {
 	s.ln.Close()
 	s.srv.Close()
-	return
 }
 
 func (s *Server) Addr() net.Addr {
@@ -196,7 +192,7 @@ func (s *Server) Addr() net.Addr {
 //	log.Printf("Successfully joined the cluster. Endpoint: %s", endpoint)
 func Join(jA []string, id string, addr *net.TCPAddr, meta map[string]string) (string, error) {
 	var err error
-	var fullUrl string
+	var fullURL string
 	logger := logging.NoContext()
 	joinAddr := make([]*url.URL, 0)
 	for _, a := range jA {
@@ -209,9 +205,9 @@ func Join(jA []string, id string, addr *net.TCPAddr, meta map[string]string) (st
 
 	for i := 0; i < numAttempts; i++ {
 		for _, joinAddr := range joinAddr {
-			fullUrl, err = join(joinAddr, id, addr, meta)
+			fullURL, err = join(joinAddr, id, addr, meta)
 			if err == nil {
-				return fullUrl, nil
+				return fullURL, nil
 			}
 		}
 		time.Sleep(2 * time.Second)
@@ -247,8 +243,15 @@ func join(joinAddr *url.URL, id string, addr *net.TCPAddr, meta map[string]strin
 			return "", err
 		}
 
-		resp, err := client.Post(joinAddr.String(), "application-type/json", bytes.NewReader(b))
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
 
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, joinAddr.String(), bytes.NewReader(b))
+		if err != nil {
+			return "", err
+		}
+		req.Header.Set("Content-Type", "application-type/json")
+		resp, err := http.DefaultClient.Do(req)
 		logger.Debug("Join request, method: POST", zap.String("url", joinAddr.String()))
 
 		if err != nil {
@@ -265,11 +268,11 @@ func join(joinAddr *url.URL, id string, addr *net.TCPAddr, meta map[string]strin
 		case http.StatusOK:
 			return joinAddr.String(), nil
 		case http.StatusMovedPermanently:
-			redirectUrl := resp.Header.Get("location")
-			if redirectUrl == "" {
+			redirectURL := resp.Header.Get("location")
+			if redirectURL == "" {
 				return "", fmt.Errorf("failed to join, invalid redirect received")
 			}
-			joinAddr, err = url.Parse(redirectUrl)
+			joinAddr, err = url.Parse(redirectURL)
 			if err != nil {
 				return "", fmt.Errorf("failed to join, invalid redirect received")
 			}
@@ -284,7 +287,6 @@ func join(joinAddr *url.URL, id string, addr *net.TCPAddr, meta map[string]strin
 		default:
 			return "", fmt.Errorf("failed to join, node returned: %s: (%s)", resp.Status, string(b))
 		}
-
 	}
 }
 

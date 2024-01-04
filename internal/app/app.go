@@ -61,9 +61,9 @@ func setupStore(ctx context.Context, cfg *config.Config) (*shrek.Shrek, func(), 
 		logger.Fatal("Unable to open raft store", zap.Error(err))
 	}
 
-	apiAdvertise := cfg.ServerConfig.HttpAddr.String()
-	if cfg.ServerConfig.HttpAdvertise.IP != nil {
-		apiAdvertise = cfg.ServerConfig.HttpAdvertise.String()
+	apiAdvertise := cfg.ServerConfig.HTTPAddr.String()
+	if cfg.ServerConfig.HTTPAdvertise.IP != nil {
+		apiAdvertise = cfg.ServerConfig.HTTPAdvertise.String()
 	}
 
 	meta := map[string]string{
@@ -119,10 +119,7 @@ func setupStore(ctx context.Context, cfg *config.Config) (*shrek.Shrek, func(), 
 
 func setupHTTPServer(ctx context.Context, cfg *config.Config, s *shrek.Shrek) error {
 	srv := server.New(ctx, cfg.ServerConfig, s)
-	if err := srv.Run(); err != nil {
-		return err
-	}
-	return nil
+	return srv.Run()
 }
 
 func NewApp(ctx context.Context, cfg *config.Config) (*Application, func(), error) {

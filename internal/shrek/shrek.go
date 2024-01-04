@@ -14,7 +14,6 @@ import (
 	raftboltdb "github.com/hashicorp/raft-boltdb"
 	"go.uber.org/zap"
 	"io"
-	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -61,14 +60,8 @@ type Shrek struct {
 	// raft
 	raft *raft.Raft
 
-	cfg *config.Config
-
 	raftLayer     Listener
 	raftTransport *raft.NetworkTransport
-
-	// rpcListener is used to listen for incoming connections
-	rpcListener net.Listener
-	listenerCh  chan struct{}
 
 	// physical store
 	boltStore *raftboltdb.BoltStore
@@ -78,9 +71,8 @@ type Shrek struct {
 	// log storage
 	raftLog raft.LogStore
 
-	raftDir  string
-	raftBind string
-	raftID   string
+	raftDir string
+	raftID  string
 
 	mu sync.RWMutex
 
@@ -210,7 +202,7 @@ func (s *Shrek) Restore(snapshot io.ReadCloser) error {
 	var db *sql.DB
 	var err error
 
-	if err := os.WriteFile(s.dbConf.DBFilename, database, 0660); err != nil {
+	if err := os.WriteFile(s.dbConf.DBFilename, database, 0600); err != nil {
 		return err
 	}
 
@@ -288,11 +280,14 @@ func (s *Shrek) setMetadata(id string, md map[string]string) error {
 	}
 
 	f := s.raft.Apply(b, s.ApplyTimeout)
-	if e := f.(raft.Future); e.Error() != nil {
+	if e, ok := f.(raft.Future); ok && e.Error() != nil {
 		if errors.Is(e.Error(), raft.ErrNotLeader) {
 			return ErrNotLeader
 		}
-		e.Error()
+		err := e.Error()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -321,14 +316,17 @@ func (s *Shrek) Execute(r *ExecuteRequest) ([]*sql.Result, error) {
 	}
 
 	f := s.raft.Apply(b, s.ApplyTimeout)
-	if e := f.(raft.Future); e.Error() != nil {
+	if e, ok := f.(raft.Future); ok && e.Error() != nil {
 		if errors.Is(e.Error(), raft.ErrNotLeader) {
 			return nil, ErrNotLeader
 		}
 		return nil, e.Error()
 	}
 
-	res := f.Response().(*fsmExecuteResponse)
+	res, ok := f.Response().(*fsmExecuteResponse)
+	if !ok {
+		return nil, errors.New("failed response type")
+	}
 	return res.results, res.error
 }
 
@@ -336,7 +334,7 @@ func (s *Shrek) Query(r *QueryRequest) ([]*sql.Rows, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if r.Lvl == Strong {
+	if r.Lvl == Strong { //nolint:nestif //todo
 		body, err := json.Marshal(&storagePayload{
 			UseTx:          r.UseTx,
 			Queries:        r.Queries,
@@ -353,14 +351,17 @@ func (s *Shrek) Query(r *QueryRequest) ([]*sql.Rows, error) {
 			return nil, err
 		}
 		f := s.raft.Apply(b, s.ApplyTimeout)
-		if e := f.(raft.Future); e.Error() != nil {
+		if e, ok := f.(raft.Future); ok && e.Error() != nil {
 			if errors.Is(e.Error(), raft.ErrNotLeader) {
 				return nil, ErrNotLeader
 			}
 			return nil, e.Error()
 		}
 
-		res := f.Response().(*fsmQueryResponse)
+		res, ok := f.Response().(*fsmQueryResponse)
+		if !ok {
+			return nil, errors.New("invalid response")
+		}
 		return res.rows, res.error
 	}
 
@@ -380,7 +381,7 @@ func (s *Shrek) Join(id, addr string, metadata map[string]string) error {
 
 	f := s.raft.AddVoter(raft.ServerID(id), raft.ServerAddress(addr), 0, 0)
 
-	if e := f.(raft.Future); e.Error() != nil {
+	if e, ok := f.(raft.Future); ok && e.Error() != nil {
 		if errors.Is(e.Error(), raft.ErrNotLeader) {
 			return ErrNotLeader
 		}
@@ -418,7 +419,7 @@ func (s *Shrek) Remove(addr string) error {
 }
 
 func (s *Shrek) Leader() string {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 
@@ -622,18 +623,21 @@ func (s *Shrek) openDB() (*sql.DB, error) {
 
 // LeaderID ... Returns leader ID
 func (s *Shrek) LeaderID() (string, error) {
-	addr, serverId := s.LeaderAddr()
-	fmt.Println(serverId)
+	addr, serverID := s.LeaderAddr()
+	s.logger.Info("Current leader info", zap.String("addr", string(addr)), zap.String("server ID", string(serverID)))
+
 	cfg := s.raft.GetConfiguration()
 	if err := cfg.Error(); err != nil {
 		return "", err
 	}
 	raftServers := cfg.Configuration().Servers
+
 	for _, server := range raftServers {
-		if server.Address == raft.ServerAddress(addr) {
+		if server.Address == addr {
 			return string(server.ID), nil
 		}
 	}
+
 	return "", nil
 }
 
@@ -717,10 +721,7 @@ func (s *Shrek) WaitForApplied(timeout time.Duration) error {
 		"Waiting for the app of all Raft log entries to be completed on the database",
 		zap.String("timeout", strconv.FormatInt(int64(timeout), 10)),
 	)
-	if err := s.WaitForAppliedIndex(s.raft.LastIndex(), timeout); err != nil {
-		return err
-	}
-	return nil
+	return s.WaitForAppliedIndex(s.raft.LastIndex(), timeout)
 }
 
 // ID ... Returns the raft ID

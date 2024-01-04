@@ -1,11 +1,11 @@
 package utils
 
 import (
-	"math/rand"
+	"crypto/rand"
+	"math/big"
 	"net"
 	"os"
 	"path/filepath"
-	"time"
 )
 
 func PathExists(path string) bool {
@@ -37,15 +37,18 @@ func FindDirectory(currentDir, target string) string {
 
 func RandomString(n int) string {
 	var alphanumerics = []rune("abcdefghijklmnopqrstuvwxyz0123456789")
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	s := make([]rune, n)
 	for i := range s {
-		s[i] = alphanumerics[r.Intn(len(alphanumerics))]
+		randomIndex, err := rand.Int(rand.Reader, big.NewInt(int64(len(alphanumerics))))
+		if err != nil {
+			return ""
+		}
+		s[i] = alphanumerics[randomIndex.Int64()]
 	}
 	return string(s)
 }
 
-func GetTcpAddr(addr string) (*net.TCPAddr, error) {
+func GetTCPAddr(addr string) (*net.TCPAddr, error) {
 	res, err := net.ResolveTCPAddr("tcp", addr)
 	if err != nil {
 		return nil, err

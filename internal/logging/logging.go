@@ -48,6 +48,10 @@ func New(env core.Env) {
 	switch env {
 	case core.Local:
 		logger = NewLocal()
+	case core.Production:
+		// TODO
+	case core.Development:
+		// TODO
 	default:
 		panic("Invalid environment")
 	}
