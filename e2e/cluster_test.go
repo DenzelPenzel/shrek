@@ -19,7 +19,7 @@ func Test_SingleNodeCRUD(t *testing.T) {
 	}{
 		{
 			body: server.QueryRequest{
-				Queries:        []string{`create table test (id integer not null primary key, name text)`},
+				Queries:        []string{`create table test(id integer not null primary key, name text)`},
 				UseTx:          false,
 				IncludeTimings: false,
 			},

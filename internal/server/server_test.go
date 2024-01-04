@@ -45,7 +45,7 @@ func Test_HTTPServer(t *testing.T) {
 
 		resp, err := client.Get(apiRequest)
 		require.NoError(t, err)
-		require.Equal(t, "application/json; charset=utf-8", resp.Header.Get("Content-Type"))
+		require.Equal(t, "application/json", resp.Header.Get("Content-Type"))
 		require.Equal(t, http.StatusOK, resp.StatusCode)
 	})
 
@@ -134,14 +134,12 @@ func Test_HTTPServer(t *testing.T) {
 			}
 			w.WriteHeader(http.StatusOK)
 		}))
-
 		defer mockSrv.Close()
 
 		addr, _ := net.ResolveTCPAddr("tcp", "127.0.0.1:9090")
-
 		resp, err := Join([]string{mockSrv.URL}, "node1", addr, nil)
 		require.NoError(t, err)
-		require.Equal(t, resp, mockSrv.URL+"/join")
+		require.Equal(t, resp, mockSrv.URL+"/api/db/join")
 	})
 
 	t.Run("test set join node and parse meta", func(t *testing.T) {
@@ -170,7 +168,7 @@ func Test_HTTPServer(t *testing.T) {
 
 		resp, err := Join([]string{mockSrv.URL}, "node1", addr, meta)
 		require.NoError(t, err)
-		require.Equal(t, mockSrv.URL+"/join", resp)
+		require.Equal(t, mockSrv.URL+"/api/db/join", resp)
 
 		val, ok := body["id"]
 		require.True(t, ok)
@@ -213,7 +211,7 @@ func Test_HTTPServer(t *testing.T) {
 		addr, _ := net.ResolveTCPAddr("tcp", "127.0.0.1:9090")
 		resp, err := Join([]string{mockSrv1.URL, mockSrv2.URL}, "node1", addr, nil)
 		require.NoError(t, err)
-		require.Equal(t, mockSrv1.URL+"/join", resp)
+		require.Equal(t, mockSrv1.URL+"/api/db/join", resp)
 	})
 
 	t.Run("test multi set join second node", func(t *testing.T) {
@@ -230,7 +228,7 @@ func Test_HTTPServer(t *testing.T) {
 		addr, _ := net.ResolveTCPAddr("tcp", "127.0.0.1:9090")
 		resp, err := Join([]string{mockSrv1.URL, mockSrv2.URL}, "node1", addr, nil)
 		require.NoError(t, err)
-		require.Equal(t, mockSrv2.URL+"/join", resp)
+		require.Equal(t, mockSrv2.URL+"/api/db/join", resp)
 	})
 
 	t.Run("test multi set join second node redirect", func(t *testing.T) {
