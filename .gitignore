@@ -1,0 +1,7 @@
+/bin/
+config/config.env
+/.vscode/
+/.idea
+genesis.json
+/.devnet/
+vendor
