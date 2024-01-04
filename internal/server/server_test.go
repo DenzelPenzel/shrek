@@ -237,15 +237,15 @@ func Test_HTTPServer(t *testing.T) {
 			w.WriteHeader(http.StatusOK)
 		}))
 		defer mockSrv1.Close()
-		redirectAddr := fmt.Sprintf("%s%s", mockSrv1.URL, "/join")
+		redirectAddr := fmt.Sprintf("%s%s", mockSrv1.URL, "/api/db/join")
 
 		mockSrv2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, redirectAddr, http.StatusMovedPermanently)
 		}))
 		defer mockSrv2.Close()
 
-		addr, _ := net.ResolveTCPAddr("tcp", "127.0.0.1:9090")
-		resp, err := Join([]string{mockSrv2.URL}, "node1", addr, nil)
+		addr, _ := net.ResolveTCPAddr("tcp", "127.0.0.1:0")
+		resp, err := Join([]string{mockSrv2.URL}, "node2", addr, nil)
 		require.NoError(t, err)
 		require.Equal(t, redirectAddr, resp)
 	})

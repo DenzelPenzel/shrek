@@ -243,21 +243,17 @@ func join(joinAddr *url.URL, id string, addr *net.TCPAddr, meta map[string]strin
 			return "", err
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-		defer cancel()
-
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, joinAddr.String(), bytes.NewReader(b))
-		if err != nil {
-			return "", err
-		}
-		req.Header.Set("Content-Type", "application-type/json")
-		resp, err := http.DefaultClient.Do(req)
-		logger.Debug("Join request, method: POST", zap.String("url", joinAddr.String()))
-
+		resp, err := client.Post( //nolint:noctx // no need ctx
+			joinAddr.String(),
+			"application-type/json",
+			bytes.NewReader(b),
+		)
 		if err != nil {
 			return "", err
 		}
 		defer resp.Body.Close()
+
+		logger.Debug("Join request, method: POST", zap.String("url", joinAddr.String()))
 
 		b, err = io.ReadAll(resp.Body)
 		if err != nil {
