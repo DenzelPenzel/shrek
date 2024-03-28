@@ -1,6 +1,6 @@
 ﻿# Shrek
 
-A database that's as easy to use as SQLite but also offers the strength and reliability of a distributed system
+A database that's as easy to use as SQLite but also offers the strength and reliability of a distributed system.
 
 ## Setup
 
